@@ -39,6 +39,12 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+            <!-- AspectJ for Spring AOP support -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-aop</artifactId>
+            </dependency>
+
 
         <!-- JWT Library -->
         <dependency>

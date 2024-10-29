@@ -31,16 +31,18 @@ public class JwtFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
         String authHeader = request.getHeader("Authorization");
 
-            String token = authHeader.substring(7);  // Remove "Bearer " prefix
+            String token = authHeader.substring(7);
 
             if (jwtUtil.validateToken(token)) {
                 Claims claims = jwtUtil.extractAllClaims(token);
 
                 // Extract email, role, and permissions from token
+                Long ID = claims.get("ID", Long.class);
                 String email = claims.getSubject();
                 String role = claims.get("role", String.class);
                 List<String> permissions = claims.get("permissions", List.class);
 
+                System.out.println("Authenticated user ID: " + ID);
                 System.out.println("Authenticated user: " + email);
                 System.out.println("Role: " + role);
                 System.out.println("Permissions: " + permissions);

@@ -1,5 +1,10 @@
 package org.tpjava.emsbackend.DTO;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class ClientValidationResponse {
 
     private Long id;

@@ -1,6 +1,7 @@
 package org.tpjava.AuthService.controller;
 
 import org.tpjava.AuthService.DTO.EmployeeDTO;
+import org.tpjava.AuthService.annotation.PermissionRequired;
 import org.tpjava.AuthService.exception.ResourceNotFoundException;
 import org.tpjava.AuthService.model.Employee;
 import org.tpjava.AuthService.repository.EmployeeRepository;
@@ -29,15 +30,13 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
 
-    @Value("${auth.service.api-token}")
+    @Value("${service.api-token}")
     private String authServiceApiToken;
 
-    // Get all employees - JWT protected
+    @PermissionRequired("EMPLOYEE_VIEW")
     @GetMapping
-    public ResponseEntity<List<EmployeeDTO>> getAllEmployees(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<List<EmployeeDTO>> getAllEmployees() {
 
         List<EmployeeDTO> employees = employeeRepository.findAll().stream()
                 .map(this::convertToDto)
@@ -45,26 +44,25 @@ public class EmployeeController {
         return ResponseEntity.ok(employees);
     }
 
-    // Create a new employee - JWT protected
-    @PostMapping
-    public ResponseEntity<EmployeeDTO> createEmployee(@RequestHeader("Authorization") String token, @RequestBody Employee employee) {
-        System.out.println("Token validation successful for Create Employee.");
-        Employee savedEmployee = employeeRepository.save(employee);
-        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedEmployee));
-    }
-
-    // Get employee by id - JWT protected
+    @PermissionRequired("EMPLOYEE_VIEW")
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeDTO> getEmployeeById(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<EmployeeDTO> getEmployeeById(@PathVariable Long id) {
 
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
         return ResponseEntity.ok(convertToDto(employee));
     }
 
-    // Update employee - JWT protected
+    @PermissionRequired("EMPLOYEE_CREATE")
+    @PostMapping
+    public ResponseEntity<EmployeeDTO> createEmployee(@RequestBody Employee employee) {
+        Employee savedEmployee = employeeRepository.save(employee);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedEmployee));
+    }
+
+
     @PutMapping("/{id}")
-    public ResponseEntity<EmployeeDTO> updateEmployee(@RequestHeader("Authorization") String token, @PathVariable Long id, @RequestBody Employee employeeDetails) {
+    public ResponseEntity<EmployeeDTO> updateEmployee(@PathVariable Long id, @RequestBody Employee employeeDetails) {
 
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
@@ -78,9 +76,8 @@ public class EmployeeController {
         return ResponseEntity.ok(convertToDto(updatedEmployee));
     }
 
-    // Delete employee - JWT protected
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id) {
 
         if (employeeRepository.existsById(id)) {
             employeeRepository.deleteById(id);
@@ -92,22 +89,36 @@ public class EmployeeController {
         }
     }
 
-    // Internal API for validating employees - API token protected
     @PostMapping("/internal/validateEmployee")
-    public ResponseEntity<EmployeeDTO> validateEmployee(@RequestBody Map<String, String> credentials,
-                                                        @RequestHeader("Authorization") String apiToken) {
+    public ResponseEntity<?> validateEmployee(@RequestBody Map<String, String> credentials) {
+        try {
 
-        String email = credentials.get("email");
-        String password = credentials.get("password");
-        System.out.println("Validating credentials - Email: " + email + ", Password: " + password);
 
-        Optional<Employee> employee = employeeService.findByEmailAndPassword(email, password);
-        return employee.map(value -> ResponseEntity.ok(convertToDto(value)))
-                .orElseGet(() -> {
-                    System.out.println("Employee validation failed - invalid credentials.");
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-                });
+            String email = credentials.get("email");
+            String password = credentials.get("password");
+            System.out.println("Validating credentials - Email: " + email + ", Password: " + password);
+
+            // Find the employee based on credentials
+            Optional<Employee> employee = employeeService.findByEmailAndPassword(email, password);
+
+            // Return appropriate response based on validation
+            if (employee.isPresent()) {
+                System.out.println("Employee validation successful for: " + email);
+                return ResponseEntity.ok(convertToDto(employee.get())); // Success response with EmployeeDTO
+            } else {
+                System.out.println("Employee validation failed - invalid credentials.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Invalid credentials: Employee not found or incorrect password."); // Custom error message for invalid credentials
+            }
+
+        } catch (Exception e) {
+            System.out.println("An error occurred during employee validation: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An internal error occurred while processing the request. Please try again later."); // General error message
+        }
     }
+
+
 
     private EmployeeDTO convertToDto(Employee employee) {
         EmployeeDTO dto = new EmployeeDTO();

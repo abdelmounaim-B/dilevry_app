@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
-@NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "employees")
 public class Employee {

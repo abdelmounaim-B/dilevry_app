@@ -11,6 +11,8 @@ import org.springframework.web.client.RestTemplate;
 import org.tpjava.emsbackend.DTO.AuthRequest;
 import org.tpjava.emsbackend.DTO.ClientValidationResponse;
 
+import java.util.Optional;
+
 @Component
 public class RestClientUtil {
 
@@ -52,34 +54,38 @@ public class RestClientUtil {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public boolean validateCredentials(AuthRequest authRequest, String role) {
+    public Optional<ClientValidationResponse> validateCredentials(AuthRequest authRequest, String role) {
         HttpHeaders headers = new HttpHeaders();
+        headers.set("service.api-token", authServiceApiToken);
         headers.set("Authorization", authServiceApiToken);
+
 
         System.out.println("Validating credentials for " + role + " with email: " + authRequest.getEmail());
 
         HttpEntity<AuthRequest> request = new HttpEntity<>(authRequest, headers);
-
         String validationUrl = getValidationUrl(role);
+
         if (validationUrl == null) {
             System.out.println("Error: Invalid role provided.");
-            return false;
+            return Optional.empty();
         }
+
         System.out.println("Validation URL: " + validationUrl);
 
-        // Make the request to the appropriate endpoint
         try {
             ResponseEntity<ClientValidationResponse> response = restTemplate.exchange(
                     validationUrl, HttpMethod.POST, request, ClientValidationResponse.class);
-            return response.getStatusCode().is2xxSuccessful();
+            return Optional.ofNullable(response.getBody());
         } catch (HttpClientErrorException.Unauthorized e) {
             System.out.println("Unauthorized: Invalid credentials provided.");
-            return false;
         } catch (HttpClientErrorException e) {
             System.out.println("Error during client validation: " + e.getMessage());
-            return false;
         }
+
+        return Optional.empty();
     }
+
+
 
     // Helper method to construct the URL based on the role
     private String getValidationUrl(String role) {

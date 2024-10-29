@@ -10,11 +10,8 @@ public class JwtUtil {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
-
-
     public boolean validateToken(String token) {
         try {
-            System.out.println("Validating token: " + token);
             Jwts.parserBuilder().setSigningKey(jwtSecret).build().parseClaimsJws(token);
             System.out.println("Token is valid.");
             return true;

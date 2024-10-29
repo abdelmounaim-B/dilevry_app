@@ -19,9 +19,10 @@ public class JwtUtil {
     private long jwtExpiration;
 
     // Generate token with role and permissions
-    public String generateToken(String email, String role, List<String> permissions) {
+    public String generateToken(Long ID ,String email, String role, List<String> permissions) {
         return Jwts.builder()
                 .setSubject(email)
+                .claim("ID", ID)
                 .claim("role", role)
                 .claim("permissions", permissions)
                 .setIssuedAt(new Date())
